@@ -1,0 +1,245 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// User model
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  fullName  String    @map("full_name")
+  phone     String?
+  role      UserRole  @default(USER)
+  isActive  Boolean   @default(true) @map("is_active")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  addresses Address[]
+  carts     Cart[]
+  orders    Order[]
+  auditLogs AuditLog[]
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// Address model
+model Address {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  street    String
+  ward      String
+  district  String
+  city      String
+  zipCode   String?   @map("zip_code")
+  isDefault Boolean   @default(false) @map("is_default")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("addresses")
+}
+
+// Category model
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  slug      String    @unique
+  desc      String?
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@index([deletedAt])
+  @@map("categories")
+}
+
+// Product model
+model Product {
+  id          Int       @id @default(autoincrement())
+  categoryId  Int       @map("category_id")
+  name        String
+  slug        String    @unique
+  desc        String?
+  price       Float
+  originPrice Float?    @map("origin_price")
+  stock       Int       @default(0)
+  image       String?
+  isActive    Boolean   @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([isActive, categoryId])
+  @@index([name])
+  @@index([deletedAt])
+  @@map("products")
+}
+
+// Cart model
+model Cart {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+// CartItem model
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int      @map("cart_id")
+  productId Int      @map("product_id")
+  quantity  Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+// Order model
+model Order {
+  id           Int         @id @default(autoincrement())
+  userId       Int         @map("user_id")
+  status       OrderStatus @default(PENDING)
+  totalPrice   Float       @map("total_price")
+  shippingAddr String      @map("shipping_addr")
+  phoneNumber  String      @map("phone_number")
+  note         String?
+  deletedAt    DateTime?   @map("deleted_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  // Keep order history intact: do not cascade delete orders when deleting users.
+  user  User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items OrderItem[]
+  payment Payment?
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([deletedAt])
+  @@map("orders")
+}
+
+// Payment model
+model Payment {
+  id             Int       @id @default(autoincrement())
+  orderId        Int       @unique @map("order_id")
+  amount         Float
+  paymentMethod  String?   @map("payment_method")
+  paymentStatus  String    @default("PENDING") @map("payment_status")
+  transactionId  String?   @map("transaction_id")
+  bankCode       String?   @map("bank_code")
+  responseCode   String?   @map("response_code")
+  paidAt         DateTime? @map("paid_at")
+  gatewayPayload String?   @map("gateway_payload")
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([paymentStatus])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+// OrderItem model
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  productId Int      @map("product_id")
+  quantity  Int
+  price     Float // price at time of order
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// PaymentMethod model
+model PaymentMethod {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique // VD: "Thẻ tín dụng", "Chuyển khoản", "Ví điện tử"
+  code         String   @unique // VD: "CARD", "BANK", "WALLET"
+  description  String?
+  icon         String? // Icon emoji hoặc URL
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("payment_methods")
+}
+
+// AuditLog model
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String // created, updated, deleted, login
+  entity    String // user, product, order, etc.
+  entityId  Int?     @map("entity_id")
+  oldValues String?  @map("old_values") // JSON string
+  newValues String?  @map("new_values") // JSON string
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([action, entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

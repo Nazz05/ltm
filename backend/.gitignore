@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+env
+/env
+
+# Keep sample env file if you add one later
+!.env.example
+
+# Progress Tracking & Internal Documentation
+/PTV
+/PTV/**
+
+# Generated files
+/generated/prisma
+
+# OS
+.DS_Store
+.vscode
+*.log
+
+# IDE
+.idea/
+*.swp
+*.swo

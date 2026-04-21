@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Sixedi Shop Mobile",
+    "slug": "sixedi-shop-mobile",
+    "scheme": "sixedishop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#f5f7fb"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:8080/api",
+      "googleClientId": "815036053242-phivo37o6j21eb5295u355dsikuue12c.apps.googleusercontent.com",
+      "facebookClientId": "952385887428072"
+    }
+  }
+}
