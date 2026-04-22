@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import BackHeader from '../components/BackHeader';
 import BottomNavigation from '../components/BottomNavigation';
+import Toast from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/apiClient';
 import PrimaryButton from '../components/PrimaryButton';
@@ -16,9 +17,18 @@ export default function PaymentScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [showToast, setShowToast] = useState(false);
   const insets = useSafeAreaInsets();
   const orderId = route?.params?.orderId;
   const orderData = route?.params?.order;
+
+  const displayToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
   const createStandardPayment = async (methodCode) => {
     const response = await fetch(apiUrl('/payments'), {
@@ -78,12 +88,12 @@ export default function PaymentScreen({ navigation, route }) {
 
   const handleConfirmPayment = async () => {
     if (!selectedMethod) {
-      Alert.alert('Lỗi', 'Vui lòng chọn phương thức thanh toán');
+      displayToast('Vui lòng chọn phương thức thanh toán.', 'warning');
       return;
     }
 
     if (!orderId || !orderData) {
-      Alert.alert('Lỗi', 'Thông tin đơn hàng không hợp lệ');
+      displayToast('Thông tin đơn hàng không hợp lệ.', 'error');
       return;
     }
 
@@ -95,8 +105,8 @@ export default function PaymentScreen({ navigation, route }) {
       if (methodCode === 'COD') {
         await createStandardPayment(methodCode);
 
-        Alert.alert('Thành công', 'Đơn hàng đã được xác nhận thanh toán COD.');
-        navigation.navigate('Home');
+        displayToast('Đơn hàng đã được xác nhận thanh toán COD.', 'success');
+        setTimeout(() => navigation.navigate('Home'), 500);
         return;
       }
 
@@ -118,11 +128,8 @@ export default function PaymentScreen({ navigation, route }) {
         const backendMessage = vnpayData?.message || '';
         if (backendMessage.includes('Thiếu cấu hình VNPAY')) {
           await createStandardPayment(methodCode);
-          Alert.alert(
-            'Thiếu cấu hình VNPAY',
-            'Backend chưa cấu hình VNPAY nên hệ thống đã chuyển sang tạo thanh toán thường để bạn tiếp tục test.'
-          );
-          navigation.navigate('Home');
+          displayToast('Backend chưa cấu hình VNPAY. Hệ thống đã chuyển sang thanh toán thường.', 'warning');
+          setTimeout(() => navigation.navigate('Home'), 500);
           return;
         }
 
@@ -141,9 +148,9 @@ export default function PaymentScreen({ navigation, route }) {
         await Linking.openURL(paymentUrl);
       }
 
-      Alert.alert('Đang chuyển hướng', 'Bạn đang được chuyển sang cổng thanh toán VNPAY.');
+      displayToast('Đang chuyển sang cổng thanh toán VNPAY...', 'success');
     } catch (error) {
-      Alert.alert('Lỗi', error.message || 'Không thể xác nhận thanh toán');
+      displayToast(error.message || 'Không thể xác nhận thanh toán', 'error');
     } finally {
       setProcessing(false);
     }
@@ -248,6 +255,13 @@ export default function PaymentScreen({ navigation, route }) {
           onPress={() => navigation.navigate('Checkout')}
         />
       </ScrollView>
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onHide={() => setShowToast(false)}
+        />
+      )}
       <BottomNavigation navigation={navigation} activeRoute="Payment" />
     </View>
   );

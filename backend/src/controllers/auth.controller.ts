@@ -35,34 +35,6 @@ export const authController = {
     }
   },
 
-  oauthGoogle: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { code, redirectUri } = req.body;
-      if (!code) {
-        throw new HttpError(400, "code is required", "VALIDATION_ERROR");
-      }
-
-      const result = await authService.oauthGoogle(code, redirectUri);
-      return res.status(200).json(result);
-    } catch (error) {
-      return next(error);
-    }
-  },
-
-  oauthFacebook: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { code, redirectUri } = req.body;
-      if (!code) {
-        throw new HttpError(400, "code is required", "VALIDATION_ERROR");
-      }
-
-      const result = await authService.oauthFacebook(code, redirectUri);
-      return res.status(200).json(result);
-    } catch (error) {
-      return next(error);
-    }
-  },
-
   refresh: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.body;

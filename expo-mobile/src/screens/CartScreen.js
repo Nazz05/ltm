@@ -105,6 +105,7 @@ export default function CartScreen({ navigation }) {
         <Row label="Tổng cộng" value={formatMoney(total)} bold />
 
         <PrimaryButton label="Tiến hành thanh toán" onPress={() => navigation.navigate('Checkout')} />
+        <PrimaryButton label="Tiếp tục mua sắm" variant="secondary" onPress={() => navigation.navigate('Products')} />
         <PrimaryButton label="Xóa toàn bộ giỏ" variant="secondary" onPress={() => Alert.alert('Xóa giỏ hàng', 'Bạn có chắc chắn?', [{ text: 'Hủy' }, { text: 'Xóa', style: 'destructive', onPress: () => { clearCart(); displayToast('Giỏ hàng đã xóa.', 'success'); } }])} />
       </View>
     </ScrollView>

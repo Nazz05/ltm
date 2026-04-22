@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Linking, Pressable, Alert, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
-import SurfaceCard from '../components/SurfaceCard';
+import ProductCard from '../components/ProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import BottomNavigation from '../components/BottomNavigation';
 import { useAuth } from '../context/AuthContext';
@@ -94,13 +94,20 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      <SurfaceCard style={styles.card}>
-        <Text style={styles.cardTitle}>Kênh truy cập nhanh</Text>
-        <Text style={styles.cardText}>
-          Giỏ hàng hiện có {getCartCount()} sản phẩm. Bạn có thể tiếp tục mua sắm trên web hoặc hoàn tất đơn ngay trên ứng dụng.
-        </Text>
-        <PrimaryButton label="Mở trang web" variant="secondary" onPress={() => Linking.openURL('http://localhost:5173')} />
-      </SurfaceCard>
+      <View style={styles.sectionHead}>
+        <Text style={styles.sectionKicker}>DANH MỤC</Text>
+        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
+      </View>
+
+      <View style={styles.productGrid}>
+        {products.slice(0, 6).map((product, index) => (
+          <ProductCard
+            key={product.id || index}
+            product={product}
+            onPress={() => navigation.navigate('ProductDetail', { product })}
+          />
+        ))}
+      </View>
 
       </ScrollView>
 
@@ -256,18 +263,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     padding: 12,
   },
-  card: {
-    gap: 10,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
-  },
-  cardText: {
-    color: theme.colors.muted,
-    fontSize: 14,
-    lineHeight: 21,
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   bottomNav: {
     position: 'absolute',

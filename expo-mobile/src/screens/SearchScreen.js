@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View, StyleSheet, Pressable, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { products } from '../data/products';
 import { theme } from '../theme';
 import BackHeader from '../components/BackHeader';
@@ -27,9 +28,6 @@ export default function SearchScreen({ navigation }) {
       <BackHeader title="Tìm kiếm" />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.searchHeader}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>BACK</Text>
-        </Pressable>
         <TextInput
           value={term}
           onChangeText={setTerm}
@@ -38,7 +36,7 @@ export default function SearchScreen({ navigation }) {
           placeholderTextColor={theme.colors.muted}
         />
         <Pressable onPress={() => setTerm('')}>
-          <Text style={styles.clear}>Xóa</Text>
+          <Ionicons name="close-circle" size={20} color={theme.colors.primary} />
         </Pressable>
       </View>
 
@@ -78,8 +76,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  back: { color: theme.colors.primary, fontWeight: '700', fontSize: 11 },
-  clear: { color: theme.colors.primary, fontWeight: '700', fontSize: 11 },
   title: { fontSize: 32, fontWeight: '800', color: theme.colors.primary },
   subtitle: { color: theme.colors.muted, fontSize: 13 },
   input: { flex: 1, color: theme.colors.text, minHeight: 40 },

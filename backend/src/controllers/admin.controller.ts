@@ -1,9 +1,94 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../models/prisma";
 import { HttpError } from "../utils/http-error";
+import { hashPassword } from "../utils/password";
 
 // Admin controller - Quản lý admin operations
 export const adminController = {
+  // ========== DASHBOARD ==========
+  // Lấy thống kê tổng quan dashboard
+  async getDashboardStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      // Tính từ đầu tháng
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // Lấy tất cả thông tin thống kê
+      const [totalUsers, totalOrders, totalProducts, pendingOrders, deliveredOrders] = await Promise.all([
+        prisma.user.count({ where: { deletedAt: null } }),
+        prisma.order.count({ where: { deletedAt: null } }),
+        prisma.product.count({ where: { deletedAt: null } }),
+        prisma.order.count({
+          where: {
+            deletedAt: null,
+            status: "PENDING",
+          },
+        }),
+        prisma.order.count({
+          where: {
+            deletedAt: null,
+            status: "DELIVERED",
+            createdAt: { gte: firstDayOfMonth },
+          },
+        }),
+      ]);
+
+      // Lấy doanh thu từ đầu tháng
+      const monthlyOrders = await prisma.order.findMany({
+        where: {
+          deletedAt: null,
+          status: "DELIVERED",
+          createdAt: { gte: firstDayOfMonth },
+        },
+        select: { totalPrice: true },
+      });
+
+      const totalRevenue = monthlyOrders.reduce((sum, order) => sum + order.totalPrice, 0);
+
+      res.json({
+        message: "Lấy thống kê dashboard thành công",
+        data: {
+          totalUsers,
+          totalOrders,
+          totalProducts,
+          pendingOrders,
+          monthlyRevenue: Math.round(totalRevenue * 100) / 100,
+          deliveredOrdersThisMonth: deliveredOrders,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Lấy thống kê đơn hàng theo trạng thái
+  async getOrderStatusStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+      
+      const statusCounts = await Promise.all(
+        statuses.map(async (status) => {
+          const count = await prisma.order.count({
+            where: {
+              deletedAt: null,
+              status: status,
+            },
+          });
+          return { status, count };
+        })
+      );
+
+      res.json({
+        message: "Lấy thống kê trạng thái đơn hàng thành công",
+        data: {
+          statuses: statusCounts,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // ========== ORDERS ==========
   // Lấy danh sách tất cả đơn hàng (admin view)
   async getAllOrders(req: Request, res: Response, next: NextFunction) {
@@ -157,7 +242,6 @@ export const adminController = {
       const orders = await prisma.order.findMany({
         where: {
           deletedAt: null,
-          status: "DELIVERED",
           createdAt: {
             gte: firstDayOfMonth,
           },
@@ -165,16 +249,20 @@ export const adminController = {
         select: {
           totalPrice: true,
           createdAt: true,
+          status: true,
         },
+        orderBy: { createdAt: "asc" },
       });
 
-      const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
-      const totalOrders = orders.length;
-      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      // Tính doanh thu (chỉ từ DELIVERED orders)
+      const deliveredOrders = orders.filter(o => o.status === "DELIVERED");
+      const totalRevenue = deliveredOrders.reduce((sum, order) => sum + order.totalPrice, 0);
+      const totalOrdersCount = orders.length;
+      const averageOrderValue = deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
 
       // Tính doanh thu theo ngày
       const dailyRevenueMap: { [key: string]: number } = {};
-      orders.forEach((order) => {
+      deliveredOrders.forEach((order) => {
         const date = order.createdAt.toISOString().split("T")[0] as string;
         dailyRevenueMap[date] = (dailyRevenueMap[date] || 0) + order.totalPrice;
       });
@@ -189,8 +277,9 @@ export const adminController = {
         data: {
           summary: {
             totalRevenue: Math.round(totalRevenue * 100) / 100,
-            totalOrders,
+            totalOrders: totalOrdersCount,
             averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+            deliveredOrdersCount: deliveredOrders.length,
           },
           dailyRevenue,
         },
@@ -201,6 +290,55 @@ export const adminController = {
   },
 
   // ========== USERS ==========
+  // Tạo người dùng mới (admin)
+  async createUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password, fullName, phone, role } = req.body;
+
+      if (!email || !password || !fullName) {
+        throw new HttpError(400, "Vui lòng cung cấp email, password, fullName");
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        throw new HttpError(400, "Email đã tồn tại");
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const userRole = (role || "USER").toUpperCase();
+
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          fullName,
+          phone: phone || null,
+          role: userRole as any,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      res.json({
+        message: "Tạo người dùng thành công",
+        data: newUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // Lấy danh sách tất cả người dùng
   async getAllUsers(req: Request, res: Response, next: NextFunction) {
     try {

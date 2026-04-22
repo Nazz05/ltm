@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import BackHeader from '../components/BackHeader';
 import BottomNavigation from '../components/BottomNavigation';
+import Toast from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/apiClient';
 import PrimaryButton from '../components/PrimaryButton';
@@ -15,7 +16,16 @@ export default function AddressScreen({ navigation }) {
   const [addresses, setAddresses] = useState([]);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [showToast, setShowToast] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const displayToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
   const loadAddresses = async () => {
     if (!token) {
@@ -42,8 +52,16 @@ export default function AddressScreen({ navigation }) {
   }, []);
 
   const submitAddress = async () => {
-    if (!form.street.trim() || !form.district.trim() || !form.city.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập đủ địa chỉ.');
+    if (!form.street.trim()) {
+      displayToast('Vui lòng nhập đường.', 'warning');
+      return;
+    }
+    if (!form.district.trim()) {
+      displayToast('Vui lòng nhập quận/huyện.', 'warning');
+      return;
+    }
+    if (!form.city.trim()) {
+      displayToast('Vui lòng nhập tỉnh/thành phố.', 'warning');
       return;
     }
 
@@ -61,9 +79,9 @@ export default function AddressScreen({ navigation }) {
 
       setForm(DEFAULT_FORM);
       await loadAddresses();
-      Alert.alert('Thành công', 'Đã thêm địa chỉ.');
+      displayToast('Đã thêm địa chỉ mới!', 'success');
     } catch (error) {
-      Alert.alert('Lỗi', error.message || 'Không thể thêm địa chỉ');
+      displayToast(error.message || 'Không thể thêm địa chỉ', 'error');
     }
   };
 
@@ -71,8 +89,9 @@ export default function AddressScreen({ navigation }) {
     try {
       await apiFetch(`/addresses/${addressId}`, { token, method: 'DELETE' });
       await loadAddresses();
+      displayToast('Đã xóa địa chỉ!', 'success');
     } catch (error) {
-      Alert.alert('Lỗi', error.message || 'Không thể xóa địa chỉ');
+      displayToast(error.message || 'Không thể xóa địa chỉ', 'error');
     }
   };
 
@@ -80,8 +99,9 @@ export default function AddressScreen({ navigation }) {
     try {
       await apiFetch(`/addresses/${addressId}/set-default`, { token, method: 'POST' });
       await loadAddresses();
+      displayToast('Đã đặt làm địa chỉ mặc định!', 'success');
     } catch (error) {
-      Alert.alert('Lỗi', error.message || 'Không thể đặt mặc định');
+      displayToast(error.message || 'Không thể đặt mặc định', 'error');
     }
   };
 
@@ -121,6 +141,13 @@ export default function AddressScreen({ navigation }) {
 
       <PrimaryButton label="Về trang chủ" variant="secondary" onPress={() => navigation.navigate('Home')} />
     </ScrollView>
+    {showToast && (
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setShowToast(false)}
+      />
+    )}
     <BottomNavigation navigation={navigation} activeRoute="Address" />
     </View>
   );

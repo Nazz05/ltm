@@ -18,9 +18,7 @@
       "bundler": "metro"
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:8080/api",
-      "googleClientId": "815036053242-phivo37o6j21eb5295u355dsikuue12c.apps.googleusercontent.com",
-      "facebookClientId": "952385887428072"
+      "apiBaseUrl": "http://localhost:8080/api"
     }
   }
 }

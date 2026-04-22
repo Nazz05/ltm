@@ -1,22 +1,19 @@
-import Constants from 'expo-constants';
-import { useState } from 'react';
-import { ScrollView, View, Text, TextInput, StyleSheet, Alert, Linking, Platform } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ScrollView, View, Text, TextInput, StyleSheet, Alert, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { apiUrl } from '../config/api';
 import PrimaryButton from '../components/PrimaryButton';
 import Toast from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 
-const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
-const FACEBOOK_AUTH_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
-const MOBILE_OAUTH_REDIRECT_URI = 'exp://192.168.0.102:8081/--/auth/callback';
-const MOBILE_OAUTH_FLOW_NAME = 'GeneralOAuthFlow';
-
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
@@ -24,69 +21,31 @@ export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
 
+  // Load saved email on component mount
+  useEffect(() => {
+    loadSavedEmail();
+  }, []);
+
+  const loadSavedEmail = async () => {
+    try {
+      const savedEmail = await AsyncStorage.getItem('rememberMeEmail');
+      const savedRememberMe = await AsyncStorage.getItem('rememberMeChecked');
+      if (savedEmail) {
+        setUsername(savedEmail);
+        setRememberMe(savedRememberMe === 'true');
+      }
+    } catch (error) {
+      console.log('Error loading saved email:', error);
+    }
+  };
+
   const displayToast = (message, type = 'success') => {
     setToastMessage(message);
     setToastType(type);
     setShowToast(true);
   };
 
-  const getRedirectUri = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}/auth/callback`;
-    }
-    return MOBILE_OAUTH_REDIRECT_URI;
-  };
 
-  const redirectUri = getRedirectUri();
-  const googleClientId = Constants.expoConfig?.extra?.googleClientId || '';
-  const facebookClientId = Constants.expoConfig?.extra?.facebookClientId || '';
-
-  const createOAuthState = (provider) => `${provider}:${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-
-  const openOAuth = async (provider) => {
-    const isGoogle = provider === 'google';
-    const clientId = isGoogle ? googleClientId : facebookClientId;
-    const authUrl = isGoogle ? GOOGLE_AUTH_URL : FACEBOOK_AUTH_URL;
-
-    if (!clientId) {
-      Alert.alert('Thiếu cấu hình', `Thiếu ${provider}ClientId trong app.json > expo.extra`);
-      return;
-    }
-
-    if (!redirectUri) {
-      Alert.alert('Lỗi cấu hình', 'Không xác định được URI chuyển hướng OAuth.');
-      return;
-    }
-
-    const state = createOAuthState(provider);
-    const query = isGoogle
-      ? {
-          client_id: clientId,
-          redirect_uri: redirectUri,
-          response_type: 'code',
-          scope: 'openid email profile',
-          access_type: 'offline',
-          prompt: 'consent',
-          ...(Platform.OS !== 'web' ? { flowName: MOBILE_OAUTH_FLOW_NAME } : {}),
-          state,
-        }
-      : {
-          client_id: clientId,
-          redirect_uri: redirectUri,
-          response_type: 'code',
-          scope: 'email,public_profile',
-          state,
-        };
-
-    const params = new URLSearchParams(query);
-    const finalUrl = `${authUrl}?${params.toString()}`;
-
-    try {
-      await Linking.openURL(finalUrl);
-    } catch {
-      displayToast('Không thể mở trang đăng nhập OAuth.', 'error');
-    }
-  };
 
   const handleSubmit = async () => {
     if (!username.trim() || !password.trim()) {
@@ -96,6 +55,16 @@ export default function LoginScreen({ navigation }) {
 
     try {
       setLoading(true);
+      
+      // Save email if remember me is checked
+      if (rememberMe) {
+        await AsyncStorage.setItem('rememberMeEmail', username.trim());
+        await AsyncStorage.setItem('rememberMeChecked', 'true');
+      } else {
+        await AsyncStorage.removeItem('rememberMeEmail');
+        await AsyncStorage.setItem('rememberMeChecked', 'false');
+      }
+
       const response = await fetch(apiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +78,13 @@ export default function LoginScreen({ navigation }) {
 
       login(data);
       displayToast('Đăng nhập thành công!', 'success');
-      setTimeout(() => navigation.navigate('Home'), 500);
+      // Close the login modal and reset to Home
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      }, 250);
     } catch (error) {
       const rawMessage = error?.message || 'Có lỗi xảy ra';
       const friendlyMessage = /network request failed/i.test(rawMessage)
@@ -125,47 +100,83 @@ export default function LoginScreen({ navigation }) {
     <View style={styles.screenWrapper}>
       <View style={[styles.statusBarPlaceholder, { height: insets.top }]} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.slogan}>THỜI TRANG CHO MỌI NGƯỜI</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Email/Tài khoản</Text>
-        <TextInput
-          value={username}
-          onChangeText={setUsername}
-          placeholder=""
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-          placeholderTextColor={theme.colors.muted}
-        />
-
-        <Text style={styles.label}>Mật khẩu</Text>
-        <View style={styles.passwordRow}>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            secureTextEntry={!showPassword}
-            style={[styles.input, styles.passwordInput]}
-            placeholderTextColor={theme.colors.muted}
-          />
-          <PrimaryButton
-            label={showPassword ? 'Ẩn' : 'Xem'}
-            variant="secondary"
-            onPress={() => setShowPassword((prev) => !prev)}
-            style={styles.toggleButton}
-          />
-        </View>
-
-        <PrimaryButton label={loading ? 'Đang đăng nhập...' : 'Đăng nhập'} onPress={handleSubmit} disabled={loading} />
-
-        <View style={styles.socialBlock}>
-          <PrimaryButton label="Google" variant="secondary" onPress={() => openOAuth('google')} style={styles.socialButton} />
-          <PrimaryButton label="Facebook" variant="secondary" onPress={() => openOAuth('facebook')} style={styles.socialButton} />
-        </View>
+      <View style={styles.logoContainer}>
+        <Text style={styles.logo}>SIXEDI</Text>
+        <Text style={styles.logoSub}>THỜI TRANG CHO MỌI NGƯỜI</Text>
       </View>
 
-      <PrimaryButton label="Về trang chủ" variant="secondary" onPress={() => navigation.navigate('Home')} />
+      <Text style={styles.welcomeText}>Đăng nhập vào tài khoản của bạn</Text>
+
+      <View style={styles.card}>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Email/Tài khoản</Text>
+          <TextInput
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Nhập email hoặc tên tài khoản"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+            placeholderTextColor={theme.colors.muted}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Mật khẩu</Text>
+          <View style={styles.passwordRow}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Nhập mật khẩu"
+              secureTextEntry={!showPassword}
+              style={[styles.input, styles.passwordInput]}
+              placeholderTextColor={theme.colors.muted}
+            />
+            <PrimaryButton
+              label={showPassword ? 'Ẩn' : 'Xem'}
+              variant="secondary"
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.toggleButton}
+            />
+          </View>
+        </View>
+
+        <Pressable 
+          style={styles.rememberMeRow}
+          onPress={() => setRememberMe(!rememberMe)}
+        >
+          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+            {rememberMe && (
+              <MaterialCommunityIcons name="check" size={14} color="#ffffff" />
+            )}
+          </View>
+          <Text style={styles.rememberMeText}>Ghi nhớ tôi</Text>
+        </Pressable>
+
+        <PrimaryButton 
+          label={loading ? 'Đang đăng nhập...' : 'Đăng nhập'} 
+          onPress={handleSubmit} 
+          disabled={loading}
+          style={styles.submitButton}
+        />
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+        <PrimaryButton
+          label="Đăng ký"
+          variant="secondary"
+          onPress={() => navigation.navigate('Register')}
+          style={styles.signupLink}
+        />
+      </View>
+
+      <PrimaryButton 
+        label="Về trang chủ" 
+        variant="secondary" 
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+      />
     </ScrollView>
     {showToast && (
       <Toast
@@ -182,35 +193,60 @@ const styles = StyleSheet.create({
   screenWrapper: { flex: 1, backgroundColor: '#000000' },
   statusBarPlaceholder: { backgroundColor: '#000000', width: '100%' },
   screen: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: 20, gap: 14, justifyContent: 'center', flexGrow: 1 },
-  slogan: {
+  content: { padding: 20, gap: 20, justifyContent: 'center', flexGrow: 1 },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 4,
+  },
+  logo: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: theme.colors.primary,
+    letterSpacing: 4,
+  },
+  logoSub: {
     textAlign: 'center',
     color: theme.colors.muted,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 2,
     fontWeight: '700',
-    marginBottom: 8,
+  },
+  welcomeText: {
+    textAlign: 'center',
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 18,
-    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 20,
+    gap: 16,
+  },
+  formGroup: {
+    gap: 8,
   },
   label: {
     color: theme.colors.text,
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
-    minHeight: 44,
-    borderRadius: 4,
+    minHeight: 48,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     fontSize: 14,
     color: theme.colors.text,
+    fontSize: 14,
+    backgroundColor: '#ffffff',
   },
   passwordRow: {
     flexDirection: 'row',
@@ -221,15 +257,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleButton: {
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 14,
   },
-  socialBlock: {
-    marginTop: 8,
-    gap: 8,
+  rememberMeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
   },
-  socialButton: {
-    flex: 1,
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  checkboxChecked: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  rememberMeText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  submitButton: {
+    marginTop: 8,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerText: {
+    color: theme.colors.muted,
+    fontSize: 14,
+  },
+  signupLink: {
+    paddingHorizontal: 0,
+  },
+  backButton: {
+    marginTop: 8,
   },
 });

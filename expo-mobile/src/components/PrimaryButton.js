@@ -4,6 +4,7 @@ import { theme } from '../theme';
 
 export default function PrimaryButton({ label, onPress, variant = 'primary', style, disabled = false }) {
   const isSecondary = variant === 'secondary';
+  const isDanger = variant === 'danger';
 
   return (
     <Pressable
@@ -11,13 +12,13 @@ export default function PrimaryButton({ label, onPress, variant = 'primary', sty
       disabled={disabled}
       style={({ pressed }) => [
         styles.button,
-        isSecondary ? styles.secondary : styles.primary,
+        isDanger ? styles.danger : isSecondary ? styles.secondary : styles.primary,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         style,
       ]}
     >
-      <Text style={[styles.label, isSecondary && styles.secondaryLabel]}>{label}</Text>
+      <Text style={[styles.label, (isSecondary || isDanger) && styles.altLabel]}>{label}</Text>
     </Pressable>
   );
 }
@@ -39,6 +40,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primarySoft,
     borderColor: '#c7d7ff',
   },
+  danger: {
+    backgroundColor: '#ff4444',
+    borderColor: '#ff4444',
+  },
   disabled: {
     opacity: 0.55,
   },
@@ -51,7 +56,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
-  secondaryLabel: {
+  altLabel: {
     color: theme.colors.primary,
   },
 });

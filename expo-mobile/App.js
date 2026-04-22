@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
-import AuthCallbackScreen from './src/screens/AuthCallbackScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import ProductsScreen from './src/screens/ProductsScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import CartScreen from './src/screens/CartScreen';
@@ -16,6 +16,7 @@ import OrdersScreen from './src/screens/OrdersScreen';
 import AddressScreen from './src/screens/AddressScreen';
 import PaymentScreen from './src/screens/PaymentScreen';
 import AdminScreen from './src/screens/AdminScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 import { CartProvider } from './src/context/CartContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { theme } from './src/theme';
@@ -28,7 +29,7 @@ const linking = {
     screens: {
       Home: '',
       Login: 'login',
-      AuthCallback: 'auth/callback',
+      Register: 'register',
       Products: 'products',
       ProductDetail: 'product/:id',
       Cart: 'cart',
@@ -39,6 +40,7 @@ const linking = {
       Address: 'address',
       Payment: 'payment',
       Admin: 'admin',
+      EditProfile: 'edit-profile',
     },
   },
 };
@@ -80,11 +82,24 @@ export default function App() {
                 <Stack.Screen name="Address" component={AddressScreen} options={{ title: 'Địa chỉ' }} />
                 <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Thanh toán' }} />
                 <Stack.Screen name="Admin" component={AdminScreen} options={{ title: 'Quản trị' }} />
-                <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Đăng nhập' }} />
-                <Stack.Screen
-                  name="AuthCallback"
-                  component={AuthCallbackScreen}
-                  options={{ title: 'Đang xử lý...' }}
+                <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Cập nhật thông tin' }} />
+                <Stack.Screen 
+                  name="Login" 
+                  component={LoginScreen} 
+                  options={{ 
+                    title: 'Đăng nhập',
+                    presentation: 'modal',
+                    animationEnabled: true,
+                  }} 
+                />
+                <Stack.Screen 
+                  name="Register" 
+                  component={RegisterScreen} 
+                  options={{ 
+                    title: 'Đăng ký',
+                    presentation: 'modal',
+                    animationEnabled: true,
+                  }} 
                 />
               </Stack.Navigator>
             </View>

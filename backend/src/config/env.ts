@@ -41,9 +41,4 @@ export const env = {
   vnpayReturnUrl: process.env.VNPAY_RETURN_URL ?? "",
   vnpayIpnUrl: process.env.VNPAY_IPN_URL ?? "",
   vnpayLocale: process.env.VNPAY_LOCALE ?? "vn",
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-  facebookClientId: process.env.FACEBOOK_CLIENT_ID ?? "",
-  facebookClientSecret: process.env.FACEBOOK_CLIENT_SECRET ?? "",
-  oauthRedirectUri: process.env.OAUTH_REDIRECT_URI ?? "",
 };

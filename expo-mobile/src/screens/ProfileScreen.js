@@ -34,8 +34,33 @@ export default function ProfileScreen({ navigation }) {
         </View>
         <Text style={styles.title}>{user?.fullName || user?.name || 'Tài khoản'}</Text>
         <Text style={styles.sub}>{user?.email || 'Chưa có email'}</Text>
+        {user?.phone && <Text style={styles.phone}>{user.phone}</Text>}
+        <PrimaryButton 
+          label="Cập nhật thông tin"
+          variant="secondary"
+          onPress={() => navigation.navigate('EditProfile')}
+          style={styles.editButton}
+        />
       </View>
 
+      <View style={styles.infoCard}>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Email</Text>
+          <Text style={styles.infoValue}>{user?.email || '-'}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Số điện thoại</Text>
+          <Text style={styles.infoValue}>{user?.phone || 'Chưa cập nhật'}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Vai trò</Text>
+          <Text style={styles.infoValue}>{user?.role === 'ADMIN' ? 'Quản trị viên' : 'Khách hàng'}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Quản lý tài khoản</Text>
       <View style={styles.grid}>
         <Card label="Đơn hàng" note="Theo dõi đơn" onPress={() => navigation.navigate('Orders')} />
         <Card label="Địa chỉ" note="Số địa chỉ" onPress={() => navigation.navigate('Address')} />
@@ -43,19 +68,19 @@ export default function ProfileScreen({ navigation }) {
         <Card label="Hỗ trợ" note="Liên hệ" onPress={() => navigation.navigate('Home')} />
       </View>
 
-      <PrimaryButton label="Đăng nhập" onPress={() => navigation.navigate('Login')} />
-      <PrimaryButton
-        label="Đăng xuất"
-        variant="secondary"
-        onPress={() => {
-          logout();
-          clearCart();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Home' }],
-          });
-        }}
-      />
+      <View style={styles.actionButtons}>
+        <PrimaryButton
+          label="Đăng xuất"
+          onPress={() => {
+            logout();
+            clearCart();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            });
+          }}
+        />
+      </View>
     </ScrollView>
     <BottomNavigation navigation={navigation} activeRoute="Profile" />
     </View>
@@ -78,7 +103,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14, paddingBottom: 28 },
   topIcon: { color: theme.colors.primary, fontSize: 11, fontWeight: '700' },
   brand: { color: theme.colors.primary, fontWeight: '900', letterSpacing: 2 },
-  headerBlock: { alignItems: 'center', gap: 4, paddingVertical: 8 },
+  headerBlock: { alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, borderWidth: 1, borderColor: theme.colors.border },
   avatar: {
     width: 92,
     height: 92,
@@ -87,12 +112,54 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: theme.colors.primary,
   },
-  avatarText: { color: theme.colors.primary, fontSize: 30, fontWeight: '900' },
-  title: { fontSize: 30, fontWeight: '800', color: theme.colors.primary },
-  sub: { color: theme.colors.muted, fontSize: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 },
+  avatarText: { color: theme.colors.primary, fontSize: 36, fontWeight: '900' },
+  title: { fontSize: 28, fontWeight: '800', color: theme.colors.text, textAlign: 'center' },
+  sub: { color: theme.colors.muted, fontSize: 13, textAlign: 'center' },
+  phone: { color: theme.colors.text, fontSize: 12, fontWeight: '600' },
+  editButton: {
+    marginTop: 8,
+    minWidth: 200,
+  },
+  infoCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    gap: 0,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  infoLabel: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
   card: {
     width: '48%',
     backgroundColor: theme.colors.surface,
@@ -100,12 +167,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 16,
-    gap: 5,
-    minHeight: 120,
-    justifyContent: 'flex-end',
+    gap: 8,
+    minHeight: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  cardTitle: { color: theme.colors.primary, fontSize: 20, fontWeight: '800' },
-  cardNote: { color: theme.colors.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
+  cardTitle: { color: theme.colors.primary, fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  cardNote: { color: theme.colors.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
+  actionButtons: {
+    gap: 10,
+  },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 14, backgroundColor: theme.colors.background },
   emptyTitle: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
   emptyText: { color: theme.colors.muted, textAlign: 'center', lineHeight: 22, marginBottom: 6 },

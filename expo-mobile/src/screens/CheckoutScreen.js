@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import BackHeader from '../components/BackHeader';
 import BottomNavigation from '../components/BottomNavigation';
+import Toast from '../components/Toast';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../config/api';
@@ -16,7 +17,16 @@ export default function CheckoutScreen({ navigation }) {
   const [loadingAddress, setLoadingAddress] = useState(true);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ fullName: '', phone: '', address: '', note: '' });
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [showToast, setShowToast] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const displayToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
   // Load địa chỉ từ API khi component mount
   useEffect(() => {
@@ -73,23 +83,32 @@ export default function CheckoutScreen({ navigation }) {
   const total = getCartTotal() + shipping;
 
   const handleContinueToConfirm = () => {
-    if (!form.fullName.trim() || !form.phone.trim() || !form.address.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ.');
+    if (!form.fullName.trim()) {
+      displayToast('Vui lòng nhập họ tên.', 'warning');
+      return;
+    }
+    if (!form.phone.trim()) {
+      displayToast('Vui lòng nhập số điện thoại.', 'warning');
+      return;
+    }
+    if (!form.address.trim()) {
+      displayToast('Vui lòng nhập địa chỉ giao hàng.', 'warning');
       return;
     }
 
-    setStep(2);
+    displayToast('Thông tin đã được xác nhận!', 'success');
+    setTimeout(() => setStep(2), 300);
   };
 
   const handleSubmit = async () => {
     if (!user || !token) {
-      Alert.alert('Cần đăng nhập', 'Vui lòng đăng nhập trước khi thanh toán.');
-      navigation.navigate('Login');
+      displayToast('Vui lòng đăng nhập để tiếp tục thanh toán.', 'error');
+      setTimeout(() => navigation.navigate('Login'), 500);
       return;
     }
 
     if (!form.fullName.trim() || !form.phone.trim() || !form.address.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ.');
+      displayToast('Vui lòng nhập đầy đủ thông tin giao hàng.', 'warning');
       return;
     }
 
@@ -115,10 +134,11 @@ export default function CheckoutScreen({ navigation }) {
       }
 
       clearCart();
+      displayToast('Đặt hàng thành công!', 'success');
       const orderId = data.data?.id;
-      navigation.navigate('Payment', { orderId, order: data.data });
+      setTimeout(() => navigation.navigate('Payment', { orderId, order: data.data }), 500);
     } catch (error) {
-      Alert.alert('Lỗi', error.message || 'Không thể đặt hàng');
+      displayToast(error.message || 'Không thể đặt hàng', 'error');
     } finally {
       setLoading(false);
     }
@@ -210,6 +230,13 @@ export default function CheckoutScreen({ navigation }) {
       </>
       )}
     </ScrollView>
+    {showToast && (
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setShowToast(false)}
+      />
+    )}
     <BottomNavigation navigation={navigation} activeRoute="Checkout" />
     </View>
   );
