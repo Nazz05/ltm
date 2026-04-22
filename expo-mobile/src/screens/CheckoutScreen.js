@@ -116,7 +116,6 @@ export default function CheckoutScreen({ navigation }) {
 
       clearCart();
       const orderId = data.data?.id;
-      Alert.alert('Thành công', 'Đơn hàng đã được tạo.');
       navigation.navigate('Payment', { orderId, order: data.data });
     } catch (error) {
       Alert.alert('Lỗi', error.message || 'Không thể đặt hàng');
